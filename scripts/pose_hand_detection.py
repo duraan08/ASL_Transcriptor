@@ -14,9 +14,6 @@ def get_landmarks(landmarks, landmark_type):
                 landmark_data.append([landmark.x, landmark.y, landmark.z])
         return np.array(landmark_data)
 
-## Se crea el archivo hd5f para almacenar los landmarks
-hd5f_file = h5py.File('C:/Universidad/TFG/Desarrollo/data_vector/landmarks_dataset.hdf5', 'w')
-
 # Se establece la función encargada de obtener y dibujar los resultados
 def detectAll(holistic, video_path, draw=False, display=False):
     cap = cv2.VideoCapture(video_path)
@@ -30,10 +27,10 @@ def detectAll(holistic, video_path, draw=False, display=False):
 
     ## Array dummy para cuando se de el caso de que las manos no aparezcan 
     hands_dummy = np.zeros([21,3])
-    hands_dummy.fill(-2)
+    hands_dummy.fill(-2.0)
 
     pose_dummy = np.zeros([33,3])
-    pose_dummy.fill(-2)
+    pose_dummy.fill(-2.0)
 
     print(f"size pose dummy --> {pose_dummy.shape} \n size manos dummy --> {hands_dummy.shape}")
     
@@ -92,32 +89,62 @@ def detectAll(holistic, video_path, draw=False, display=False):
     cv2.destroyAllWindows()
     return matrix
 
-# Ruta al video
-path = os.listdir('C:/Universidad/TFG/Desarrollo/ASL_videos/train/')
-str_path = 'C:/Universidad/TFG/Desarrollo/ASL_videos/train/'
+# Ruta al video (TRAIN)
+path_train = os.listdir('C:/Universidad/TFG/Desarrollo/ASL_videos/train/')
+path_train.sort()
+str_path_train = 'C:/Universidad/TFG/Desarrollo/ASL_videos/train/'
+
+# Ruta al video (TEST)
+path_test = os.listdir('C:/Universidad/TFG/Desarrollo/ASL_videos/test/')
+path_test.sort()
+str_path_test = 'C:/Universidad/TFG/Desarrollo/ASL_videos/test/'
+
+# Ruta al video (VAL)
+path_val = os.listdir('C:/Universidad/TFG/Desarrollo/ASL_videos/val/')
+path_val.sort()
+str_path_val = 'C:/Universidad/TFG/Desarrollo/ASL_videos/val/'
 
 ## Path para pequeña prueba
-path_lil_test = os.listdir('C:/Universidad/TFG/Desarrollo/ASL_videos/lil_test/')
-path_lil_test.sort()
-str_path_lil_test = 'C:/Universidad/TFG/Desarrollo/ASL_videos/lil_test/'
+path_lil = os.listdir('C:/Universidad/TFG/Desarrollo/ASL_videos/lil_test/')
+path_lil.sort()
+str_path_lil = 'C:/Universidad/TFG/Desarrollo/ASL_videos/lil_test/'
+
+## Se crea el archivo hd5f para almacenar los landmarks
+##hd5f_file = h5py.File('C:/Universidad/TFG/Desarrollo/data_vector/landmarks_dataset.hdf5', 'w')
 
 ##Se crea un array con los videos para poder acceder a ellos de manera ordenada
 video_list_ordinal = []
 ## Se inicializa la matriz para almacenar los landmarks
 matrix = []
+## Lista de los diferentes paths
+paths = [str_path_train, str_path_test, str_path_val, str_path_lil]
 
-for selected_video in path_lil_test:    
-    ## Se inserta el nombre de cada video
-    video_list_ordinal.append(selected_video)
+for selected_path in paths:
+    path_splited = selected_path.split('/')
+    if (path_splited[5] == "train"):
+        hd5f_file = h5py.File('C:/Universidad/TFG/Desarrollo/data_vector/TRAIN_landmarks_dataset.hdf5', 'w')
+    elif (path_splited[5] == "test"):
+        hd5f_file = h5py.File('C:/Universidad/TFG/Desarrollo/data_vector/TEST_landmarks_dataset.hdf5', 'w')
+    elif (path_splited[5] == "val"):
+        hd5f_file = h5py.File('C:/Universidad/TFG/Desarrollo/data_vector/VAL_landmarks_dataset.hdf5', 'w')
+    else:
+        hd5f_file = h5py.File('C:/Universidad/TFG/Desarrollo/data_vector/LIL_landmarks_dataset.hdf5', 'w')
 
-    ## Se llama a la función para procesar el video
-    matrix_v2 = detectAll(mp.solutions.holistic.Holistic(static_image_mode=False, min_tracking_confidence=0.7, min_detection_confidence=0.7),
-          str_path_lil_test + selected_video, draw=True, display=True)
-    
-    ##Almacenar los landmarks obtenidos en el archivo hd5f
-    hd5f_file.create_dataset(f"{selected_video}", data=np.asarray(matrix_v2))
-## Se cierra el archivo al finalizar
-hd5f_file.close()
+    path = os.listdir(selected_path)
+    str_path = selected_path
+
+    for selected_video in path:    
+        ## Se inserta el nombre de cada video
+        video_list_ordinal.append(selected_video)
+
+        ## Se llama a la función para procesar el video
+        matrix_v2 = detectAll(mp.solutions.holistic.Holistic(static_image_mode=False, min_tracking_confidence=0.7, min_detection_confidence=0.7),
+            str_path + selected_video, draw=True, display=True)
+        
+        ##Almacenar los landmarks obtenidos en el archivo hd5f
+        hd5f_file.create_dataset(f"{selected_video}", data=np.asarray(matrix_v2))
+    ## Se cierra el archivo al finalizar
+    hd5f_file.close()
 
 
 # for elem in matrix:
