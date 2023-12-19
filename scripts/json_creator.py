@@ -1,0 +1,47 @@
+import json
+import os
+
+data_path = json.load(open('C:/Universidad/TFG/Desarrollo/index/WLASL.json'))
+myDictionary = {}
+
+def createMapeo_Clases():
+    myDictionary.clear()
+    json_path = 'C:/Universidad/TFG/Desarrollo/index/'
+    json_file_name = 'Mapeo_Clases.json'
+
+    count = 0
+    for i in data_path:
+        key = count                 ## Se determina la clave
+        val = i['gloss']            ## Se determina el valor
+        myDictionary[key] = val     ## Se crea el diccionario
+        count += 1                  ## Se aumenta el valor de la clave
+
+    ##print(myDictionary)
+
+    with open(os.path.join(json_path, json_file_name), 'w') as file:
+        json.dump(myDictionary, file)
+
+    # json_created_file = json.load(open('C:/Universidad/TFG/Desarrollo/index/Mapeo_Clases.json'))
+    # print(json_created_file['11'])
+
+def createMapeo():
+    json_path = 'C:/Universidad/TFG/Desarrollo/index/'
+    json_file_name = 'Mapeo.json'
+    myDictionary.clear()
+    
+    for i in data_path:
+        val = []
+        key = i['gloss']
+        instancias = i['instances']
+        for j in instancias:
+            val.append(j['video_id'] + '.mp4')
+            myDictionary[key] = val
+
+    with open(os.path.join(json_path, json_file_name), 'w') as file:
+        json.dump(myDictionary, file)
+
+    # json_created_file = json.load(open('C:/Universidad/TFG/Desarrollo/index/Mapeo.json'))
+    # print(f"{json_created_file['book'][0]}")
+
+createMapeo_Clases()
+createMapeo()
