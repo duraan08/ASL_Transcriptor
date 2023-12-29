@@ -19,3 +19,5 @@ plt.legend()
 # Mostrar el gráfico
 plt.grid(True)
 plt.show()
+
+##plt.savefig("nombre-del-archivo.pdf")     ##Guardar la grafica en .pdf
