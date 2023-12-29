@@ -29,19 +29,17 @@ def createMapeo():
     json_file_name = 'Mapeo.json'
     myDictionary.clear()
     
+    count = 0
     for i in data_path:
-        val = []
-        key = i['gloss']
+        val = count
         instancias = i['instances']
         for j in instancias:
-            val.append(j['video_id'] + '.mp4')
+            key = j['video_id'] + '.mp4'
             myDictionary[key] = val
+        count += 1
 
     with open(os.path.join(json_path, json_file_name), 'w') as file:
         json.dump(myDictionary, file)
 
     # json_created_file = json.load(open('C:/Universidad/TFG/Desarrollo/index/Mapeo.json'))
     # print(f"{json_created_file['book'][0]}")
-
-createMapeo_Clases()
-createMapeo()
