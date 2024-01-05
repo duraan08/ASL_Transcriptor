@@ -7,9 +7,11 @@ from dataLoader import load_hdf5_data, createDataLoaders
 import json
 import os
 from json_creator import createMapeo_Clases, createMapeo
-from test_draw_graph import drawLossGraphic, drawEvalGraphic
+#from test_draw_graph import drawLossGraphic, drawEvalGraphic
 import datetime
+import datasets
 
+os.environ["CUDA_VISIBLE_DEVICES"] = ''
 ## Se crea la clase Transformer
 class TransformerEncoder(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_layers, num_heads, output_dim, max_seq_len, dropout=0.1):
@@ -47,16 +49,16 @@ class TransformerEncoder(nn.Module):
         return positional_embedding.unsqueeze(0)
 
 # Llamada a los metodos que se encargar de crear los DataLoaders customizados
-file_path_train = 'C:/Universidad/TFG/Desarrollo/data_vector/TRAIN_landmarks_dataset.hdf5'  ##Path del archivos con las coordenadas recogidas (train)
-file_path_val = 'C:/Universidad/TFG/Desarrollo/data_vector/VAL_landmarks_dataset.hdf5'      ##Path del archivos con las coordenadas recogidas (val)
-file_path_test = 'C:/Universidad/TFG/Desarrollo/data_vector/TEST_landmarks_dataset.hdf5'    ##Path del archivos con las coordenadas recogidas (test)
-path_mapeoClasses = 'C:/Universidad/TFG/Desarrollo/index/Mapeo_Clases.json'
+file_path_train = '/scratch/uduran005/tfg-workspace/data_vector/TRAIN_landmarks_dataset.hdf5'  ##Path del archivos con las coordenadas recogidas (train)
+file_path_val = '/scratch/uduran005/tfg-workspace/data_vector/VAL_landmarks_dataset.hdf5'      ##Path del archivos con las coordenadas recogidas (val)
+file_path_test = '/scratch/uduran005/tfg-workspace/data_vector/TEST_landmarks_dataset.hdf5'    ##Path del archivos con las coordenadas recogidas (test)
+path_mapeoClasses = '/scratch/uduran005/tfg-workspace/index/Mapeo_Clases.json'
 
 # Se compueba si existe el archivo y si no es así, se genera
 if (not os.path.exists(path_mapeoClasses)):
     createMapeo_Clases()
 
-num_classes = len(json.load(open('C:/Universidad/TFG/Desarrollo/index/Mapeo_Clases.json')))
+num_classes = len(json.load(open('/scratch/uduran005/tfg-workspace/index/Mapeo_Clases.json')))
 
 train_loader = createDataLoaders(num_classes, file_path_train)
 val_loader =  createDataLoaders(num_classes, file_path_train)       ##Finalmente será file_path_val
@@ -100,16 +102,26 @@ def evaluacion(model, loader, device):
     model.eval()
     correct = 0
     total = 0
+    metric = datasets.load_metric('accuracy')
+    predicciones = []
+    referencias = []    ##Valor real 
+
     with torch.no_grad():
         for inp, tg, msk in loader:
             inp, tg, msk = inp.to(device), tg.to(device), msk.to(device)
-            outputs = model(inp, msk)
-            predicted = torch.argmax(outputs, dim=0)
-            total += tg.size(1)
-            correct += (predicted == tg.long()).sum().item()
 
-    accuracy = correct / total if total != 0 else 0
-    return accuracy
+            referencias.extend(torch.argmax(tg, dim = 1))
+
+            outputs = model(inp, msk)
+            tg = torch.argmax(tg, dim = 1)
+            predicciones.extend(torch.argmax(outputs, dim = 1))
+            predicciones = [x.item() for x in predicciones]         ##Se pasa a entero
+            referencias = [x.item() for x in referencias]           ##Se pasa a entero
+
+            accuracy_eval = metric.compute(predictions = predicciones, references = referencias)
+            accuracy_eval = accuracy_eval['accuracy']*100
+
+    return accuracy_eval
 
 # ENTRENAMIENTO
 epoch = 0
@@ -118,16 +130,24 @@ best_accuracy = 0.0
 no_improvement_count = 0
 loss_values = []
 accuracy_values = []
+metric = datasets.load_metric('accuracy')
+
+
 
 while no_improvement_count < patience:
+    predicciones = []
+    referencias = []    ##Valor real 
     model.train()
     running_loss = 0.0
 
     for inp, tg, msk in train_loader:
         inp, tg, msk = inp.to(device), tg.to(device), msk.to(device)
-
         optimizer.zero_grad()
+        referencias.extend(torch.argmax(tg, dim = 1))
         outputs = model(inp, msk)
+        tg = torch.argmax(tg, dim = 1)
+        #outputs = torch.argmax(outputs, dim = 1)
+        predicciones.extend(torch.argmax(outputs, dim = 1))
         loss = criterion(outputs, tg)
         loss.backward()
         optimizer.step()
@@ -136,13 +156,21 @@ while no_improvement_count < patience:
     
     epoch_loss = running_loss / len(train_loader.dataset)
     loss_values.append(epoch_loss)
-    accuracy = evaluacion(model, val_loader, device)
-    accuracy_values.append(accuracy)
-    epoca = epoch + 1
-    print(f"[ENTRENAMIENTO] - Epoch [{epoca}/{num_epochs}] - Loss: {epoch_loss:.4f} - Accuracy: {accuracy:.4f}")
+    accuracy_eval = evaluacion(model, val_loader, device)
+    predicciones = [x.item() for x in predicciones]         ##Se pasa a entero
+    referencias = [x.item() for x in referencias]           ##Se pasa a entero
 
-    if accuracy > best_accuracy:
-        best_accuracy = accuracy
+    accuracy_train = metric.compute(predictions = predicciones, references = referencias)
+    accuracy_train = accuracy_train['accuracy']*100
+    accuracy_values.append(accuracy_train)
+    
+    epoca = epoch + 1
+
+    print(f"[ENTRENAMIENTO] - Epoch [{epoca}/{num_epochs}] - Loss: {epoch_loss:.4f} - Accuracy: {accuracy_train:.4f}")       ## Multiplicarlo x100
+    print(f"[EVALUACION]    - Accuracy: {accuracy_eval:.4f}")
+
+    if accuracy_train > best_accuracy:
+        best_accuracy = accuracy_train
         no_improvement_count = 0
     else:
         no_improvement_count += 1
@@ -152,5 +180,5 @@ while no_improvement_count < patience:
 print(f"Se han mantenido el mismo resultado durante {patience + 1} epochs. Deteniendo el bucle.")
 dateTime = datetime.datetime.now()
 dateTime = dateTime.strftime("%d%m%Y")
-drawLossGraphic(loss_values, epoca, dateTime)
-drawEvalGraphic(accuracy_values, epoca, dateTime)
+#drawLossGraphic(loss_values, epoca, dateTime)
+#drawEvalGraphic(accuracy_values, epoca, dateTime)
