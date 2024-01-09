@@ -11,7 +11,9 @@ from json_creator import createMapeo_Clases, createMapeo
 import datetime
 import datasets
 
-os.environ["CUDA_VISIBLE_DEVICES"] = ''
+# os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
+# os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+
 ## Se crea la clase Transformer
 class TransformerEncoder(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_layers, num_heads, output_dim, max_seq_len, dropout=0.1):
@@ -48,10 +50,14 @@ class TransformerEncoder(nn.Module):
         positional_embedding[:, 1::2] = torch.cos(position * div_term)
         return positional_embedding.unsqueeze(0)
 
+# Se establece que los datos se moveran a la GPU en caso de que este disponible
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 # Llamada a los metodos que se encargar de crear los DataLoaders customizados
 file_path_train = '/scratch/uduran005/tfg-workspace/data_vector/TRAIN_landmarks_dataset.hdf5'  ##Path del archivos con las coordenadas recogidas (train)
 file_path_val = '/scratch/uduran005/tfg-workspace/data_vector/VAL_landmarks_dataset.hdf5'      ##Path del archivos con las coordenadas recogidas (val)
 file_path_test = '/scratch/uduran005/tfg-workspace/data_vector/TEST_landmarks_dataset.hdf5'    ##Path del archivos con las coordenadas recogidas (test)
+file_path_lil_test = '/scratch/uduran005/tfg-workspace/data_vector/LIL_landmarks_dataset.hdf5' ##Path del archivos con las coordenadas recogidas (lil test)
 path_mapeoClasses = '/scratch/uduran005/tfg-workspace/index/Mapeo_Clases.json'
 
 # Se compueba si existe el archivo y si no es así, se genera
@@ -60,9 +66,13 @@ if (not os.path.exists(path_mapeoClasses)):
 
 num_classes = len(json.load(open('/scratch/uduran005/tfg-workspace/index/Mapeo_Clases.json')))
 
-train_loader = createDataLoaders(num_classes, file_path_train)
-val_loader =  createDataLoaders(num_classes, file_path_train)       ##Finalmente será file_path_val
-test_loader = createDataLoaders(num_classes, file_path_train)       ##Finalmente será file_path_test
+print(f"DataLoader con los datos del TRAIN: ")
+train_loader = createDataLoaders(num_classes, file_path_lil_test, device)      ##Finalmente será file_path_train
+print(f"DataLoader con los datos del EVALUACION: ")
+val_loader =  createDataLoaders(num_classes, file_path_lil_test, device)       ##Finalmente será file_path_val
+print(f"DataLoader con los datos del TEST: ")
+test_loader = createDataLoaders(num_classes, file_path_lil_test, device)       ##Finalmente será file_path_test
+
 
 
 # # Verificar la creación exitosa de los DataLoaders
@@ -88,8 +98,6 @@ output_dim = 2000       ##Coger el size del .json de mapeo (Mapeo_clases.json)
 learning_rate = 0.001
 max_seq_len = 100
 num_epochs = 999999999999
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 model = TransformerEncoder(input_dim, hidden_dim, num_layers, num_heads, output_dim, max_seq_len)
 model.to(device)
@@ -142,6 +150,7 @@ while no_improvement_count < patience:
 
     for inp, tg, msk in train_loader:
         inp, tg, msk = inp.to(device), tg.to(device), msk.to(device)
+        #print(f"Device is --> {device}")
         optimizer.zero_grad()
         referencias.extend(torch.argmax(tg, dim = 1))
         outputs = model(inp, msk)
@@ -180,5 +189,14 @@ while no_improvement_count < patience:
 print(f"Se han mantenido el mismo resultado durante {patience + 1} epochs. Deteniendo el bucle.")
 dateTime = datetime.datetime.now()
 dateTime = dateTime.strftime("%d%m%Y")
+
+##Escribir los resultados en .txt hasta que se importe la libreria que permita dibujar las graficas
+txt_file_loss = open('/scratch/uduran005/tfg-workspace/graphics/loss_data.txt', 'a')
+content_loss = f"Fecha de ejecución: {dateTime}\n\nValores de loss:\n{loss_values}\n\nNumero de epocas: {epoca}\n\n"
+txt_file_loss.write(content_loss)
+
+txt_file_acc = open('/scratch/uduran005/tfg-workspace/graphics/acc_data.txt', 'a')
+content_acc = f"Fecha de ejecución: {dateTime}\n\nValores de accuracy:\n{accuracy_values}\n\nNumero de epocas: {epoca}\n\n"
+txt_file_acc.write(content_acc)
 #drawLossGraphic(loss_values, epoca, dateTime)
 #drawEvalGraphic(accuracy_values, epoca, dateTime)
