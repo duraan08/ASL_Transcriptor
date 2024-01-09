@@ -84,72 +84,80 @@ def detectAll(holistic, video_path, draw=False, display=False):
         else:
             return img_copy, resultant
     
-
+    holistic.close()
     cap.release()
     cv2.destroyAllWindows()
     return matrix
 
 # Ruta al video (TRAIN)
-path_train = os.listdir('C:/Universidad/TFG/Desarrollo/ASL_videos/train/')
+path_train = os.listdir('/scratch/uduran005/tfg-workspace/ASL_videos/train/')
 path_train.sort()
-str_path_train = 'C:/Universidad/TFG/Desarrollo/ASL_videos/train/'
+str_path_train = '/scratch/uduran005/tfg-workspace/ASL_videos/train/'
 
 # Ruta al video (TEST)
-path_test = os.listdir('C:/Universidad/TFG/Desarrollo/ASL_videos/test/')
+path_test = os.listdir('/scratch/uduran005/tfg-workspace/ASL_videos/test/')
 path_test.sort()
-str_path_test = 'C:/Universidad/TFG/Desarrollo/ASL_videos/test/'
+str_path_test = '/scratch/uduran005/tfg-workspace/ASL_videos/test/'
 
 # Ruta al video (VAL)
-path_val = os.listdir('C:/Universidad/TFG/Desarrollo/ASL_videos/val/')
+path_val = os.listdir('/scratch/uduran005/tfg-workspace/ASL_videos/val/')
 path_val.sort()
-str_path_val = 'C:/Universidad/TFG/Desarrollo/ASL_videos/val/'
+str_path_val = '/scratch/uduran005/tfg-workspace/ASL_videos/val/'
 
 ## Path para pequeña prueba
-path_lil = os.listdir('C:/Universidad/TFG/Desarrollo/ASL_videos/lil_test/')
+path_lil = os.listdir('/scratch/uduran005/tfg-workspace/ASL_videos/lil_test/')
 path_lil.sort()
-str_path_lil = 'C:/Universidad/TFG/Desarrollo/ASL_videos/lil_test/'
-
-## Se crea el archivo hd5f para almacenar los landmarks
-##hd5f_file = h5py.File('C:/Universidad/TFG/Desarrollo/data_vector/landmarks_dataset.hdf5', 'w')
+str_path_lil = '/scratch/uduran005/tfg-workspace/ASL_videos/lil_test/'
 
 ##Se crea un array con los videos para poder acceder a ellos de manera ordenada
 video_list_ordinal = []
+
 ## Se inicializa la matriz para almacenar los landmarks
 matrix = []
-## Lista de los diferentes paths
-paths = [str_path_train, str_path_test, str_path_val, str_path_lil]
 
+## Array para almacenar los videos que han fallado
+failed_videos = []
+
+## Lista de los diferentes paths
+#paths = [str_path_train, str_path_test, str_path_val, str_path_lil]
+paths = [str_path_lil]
 for selected_path in paths:
     path_splited = selected_path.split('/')
     if (path_splited[5] == "train"):
-        hd5f_file = h5py.File('C:/Universidad/TFG/Desarrollo/data_vector/TRAIN_landmarks_dataset.hdf5', 'w')
+        hd5f_file = h5py.File('/scratch/uduran005/tfg-workspace/data_vector/TRAIN_landmarks_dataset.hdf5', 'w')
     elif (path_splited[5] == "test"):
-        hd5f_file = h5py.File('C:/Universidad/TFG/Desarrollo/data_vector/TEST_landmarks_dataset.hdf5', 'w')
+        hd5f_file = h5py.File('/scratch/uduran005/tfg-workspace/data_vector/TEST_landmarks_dataset.hdf5', 'w')
     elif (path_splited[5] == "val"):
-        hd5f_file = h5py.File('C:/Universidad/TFG/Desarrollo/data_vector/VAL_landmarks_dataset.hdf5', 'w')
+        hd5f_file = h5py.File('/scratch/uduran005/tfg-workspace/data_vector/VAL_landmarks_dataset.hdf5', 'w')
     else:
-        hd5f_file = h5py.File('C:/Universidad/TFG/Desarrollo/data_vector/LIL_landmarks_dataset.hdf5', 'w')
+        hd5f_file = h5py.File('/scratch/uduran005/tfg-workspace/data_vector/LIL_landmarks_dataset.hdf5', 'w')
 
     path = os.listdir(selected_path)
     str_path = selected_path
 
     for selected_video in path:    
-        ## Se inserta el nombre de cada video
-        video_list_ordinal.append(selected_video)
+        try:
+            ## Se llama a la función para procesar el video
+            matrix_v2 = detectAll(mp.solutions.holistic.Holistic(static_image_mode=False, min_tracking_confidence=0.7, min_detection_confidence=0.7),
+                str_path + selected_video, draw=True, display=True)
+            
+            # Verificar que la matriz no esté vacía o tenga valores nulos
+            if all(matrix_v2):
+                ## Se inserta el nombre de cada video
+                video_list_ordinal.append(selected_video)
+                ##Almacenar los landmarks obtenidos en el archivo hd5f
+                hd5f_file.create_dataset(f"{selected_video}", data=np.asarray(matrix_v2))
+            else:
+                failed_videos.append(selected_video)
+                print(f"Los datos de {selected_video} están vacíos o no son válidos.")
+        except OSError as os_error:
+            failed_videos.append(selected_video)
+            print(f"Error al acceder al archivo HDF5: {os_error}")
+        except Exception as e:
+            failed_videos.append(selected_video)
+            print(f"Error procesando el video {selected_video}")
+            print(f"Continuando con la ejecución ...")
 
-        ## Se llama a la función para procesar el video
-        matrix_v2 = detectAll(mp.solutions.holistic.Holistic(static_image_mode=False, min_tracking_confidence=0.7, min_detection_confidence=0.7),
-            str_path + selected_video, draw=True, display=True)
-        
-        ##Almacenar los landmarks obtenidos en el archivo hd5f
-        hd5f_file.create_dataset(f"{selected_video}", data=np.asarray(matrix_v2))
     ## Se cierra el archivo al finalizar
     hd5f_file.close()
-
-
-# for elem in matrix:
-#     print(len(elem[0]), len(elem[1]), len(elem[2]))
-
-
-# detectAll(mp.solutions.holistic.Holistic(static_image_mode=False, min_tracking_confidence=0.7, min_detection_confidence=0.7),
-#           path_prueba, draw=True, display=True)
+print(f"\nLos videos fallidos han sido los siguientes: {failed_videos[:]}")
