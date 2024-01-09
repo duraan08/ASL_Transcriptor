@@ -1,12 +1,12 @@
 import json
 import os
 
-data_path = json.load(open('C:/Universidad/TFG/Desarrollo/index/WLASL.json'))
+data_path = json.load(open('/scratch/uduran005/tfg-workspace/index/WLASL.json'))
 myDictionary = {}
 
 def createMapeo_Clases():
     myDictionary.clear()
-    json_path = 'C:/Universidad/TFG/Desarrollo/index/'
+    json_path = '/scratch/uduran005/tfg-workspace/index'
     json_file_name = 'Mapeo_Clases.json'
 
     count = 0
@@ -25,7 +25,7 @@ def createMapeo_Clases():
     # print(json_created_file['11'])
 
 def createMapeo():
-    json_path = 'C:/Universidad/TFG/Desarrollo/index/'
+    json_path = '/scratch/uduran005/tfg-workspace/index'
     json_file_name = 'Mapeo.json'
     myDictionary.clear()
     
