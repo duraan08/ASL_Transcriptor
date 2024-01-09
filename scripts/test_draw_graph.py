@@ -21,16 +21,16 @@ def drawLossGraphic(loss_values, num_epochs, dateTime):
     # plt.grid(True)
     # plt.show()
 
-    path_fichero = f"C:/Universidad/TFG/Desarrollo/Graphics/Loss/grafica_perdida_{dateTime}_1.pdf"
-    path_general = f"C:/Universidad/TFG/Desarrollo/Graphics/Loss"
+    path_fichero = f"/scratch/uduran005/tfg-workspace/graphics/loss/grafica_perdida_{dateTime}_1.pdf"
+    path_general = f"/scratch/uduran005/tfg-workspace/graphics/loss"
     
     if (not os.path.exists(path_fichero)):
-        plt.savefig(f"C:/Universidad/TFG/Desarrollo/Graphics/Loss/grafica_perdida_{dateTime}_1.pdf")     ##Guardar la grafica en .pdf
+        plt.savefig(f"/scratch/uduran005/tfg-workspace/graphics/loss/grafica_perdida_{dateTime}_1.pdf")     ##Guardar la grafica en .pdf
     else:
         file_list = os.listdir(path_general)
         for file in file_list:
             file_index = max(file.split("_")[3].split(".")[0])
-        plt.savefig(f"C:/Universidad/TFG/Desarrollo/Graphics/Loss/grafica_perdida_{dateTime}_{int(file_index) + 1}.pdf")     ##Guardar la grafica en .pdf
+        plt.savefig(f"/scratch/uduran005/tfg-workspace/graphics/loss/grafica_perdida_{dateTime}_{int(file_index) + 1}.pdf")     ##Guardar la grafica en .pdf
 
 
 def drawEvalGraphic(accuracy_values, num_epochs, dateTime):
@@ -51,15 +51,14 @@ def drawEvalGraphic(accuracy_values, num_epochs, dateTime):
     # plt.grid(True)
     # plt.show()
 
-    path_fichero = f"C:/Universidad/TFG/Desarrollo/Graphics/Accuracy/grafica_accuracy_{dateTime}_1.pdf"
-    path_general = f"C:/Universidad/TFG/Desarrollo/Graphics/Accuracy"
+    path_fichero = f"/scratch/uduran005/tfg-workspace/graphics/accuracy/grafica_accuracy_{dateTime}_1.pdf"
+    path_general = f"/scratch/uduran005/tfg-workspace/graphics/accuracy"
     
     if (not os.path.exists(path_fichero)):
-        plt.savefig(f"C:/Universidad/TFG/Desarrollo/Graphics/Accuracy/grafica_accuracy_{dateTime}_1.pdf")     ##Guardar la grafica en .pdf
+        plt.savefig(f"/scratch/uduran005/tfg-workspace/graphics/accuracy/grafica_accuracy_{dateTime}_1.pdf")     ##Guardar la grafica en .pdf
     else:
         file_list = os.listdir(path_general)
         for file in file_list:
             file_index = max(file.split("_")[3].split(".")[0])
         
-        plt.savefig(f"C:/Universidad/TFG/Desarrollo/Graphics/Accuracy/grafica_accuracy_{dateTime}_{int(file_index) + 1}.pdf")     ##Guardar la grafica en .pdf
-
+        plt.savefig(f"/scratch/uduran005/tfg-workspace/graphics/accuracy/grafica_accuracy_{dateTime}_{int(file_index) + 1}.pdf")     ##Guardar la grafica en .pdf
