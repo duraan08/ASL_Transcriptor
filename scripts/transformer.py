@@ -7,7 +7,7 @@ from dataLoader import load_hdf5_data, createDataLoaders
 import json
 import os
 from json_creator import createMapeo_Clases, createMapeo
-#from test_draw_graph import drawLossGraphic, drawEvalGraphic
+#from draw_graph import drawLossGraphic, drawEvalGraphic
 from execution_data import createAccLossData
 import datetime
 import datasets
