@@ -8,8 +8,10 @@ import json
 import os
 from json_creator import createMapeo_Clases, createMapeo
 #from test_draw_graph import drawLossGraphic, drawEvalGraphic
+from execution_data import createAccLossData
 import datetime
 import datasets
+
 
 # os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
 # os.environ['CUDA_VISIBLE_DEVICES'] = '0'
@@ -22,13 +24,14 @@ class TransformerEncoder(nn.Module):
         self.cls_token = nn.Parameter(torch.randn(1, 1, hidden_dim))            ##Capa de embedding para el token CLS
         self.cls_token.requires_grad = True
         self.embedding = nn.Linear(input_dim, hidden_dim)
-        self.positional_embedding = self.get_positional_embedding(hidden_dim, max_seq_len)
+        self.positional_embedding = self.get_positional_embedding(hidden_dim, max_seq_len).to(device)
         encoder_layers = nn.TransformerEncoderLayer(hidden_dim, num_heads)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layers, num_layers)
         self.fc = nn.Linear(hidden_dim, output_dim)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x, mask):
+        x = x.to(device)
         cls_tokens = self.cls_token.expand(-1, x.size(1), -1) ## Expandir el token CLS para todas las muestras del batch
         #print(f"Entrada al embeding --> {x.size()}")
         x = self.embedding(x) + self.positional_embedding[:, :x.size(1)]  # Suma incrustaciones posicionales
@@ -123,8 +126,8 @@ def evaluacion(model, loader, device):
             outputs = model(inp, msk)
             tg = torch.argmax(tg, dim = 1)
             predicciones.extend(torch.argmax(outputs, dim = 1))
-            predicciones = [x.item() for x in predicciones]         ##Se pasa a entero
-            referencias = [x.item() for x in referencias]           ##Se pasa a entero
+            predicciones = [x.item() if torch.is_tensor(x) else x for x in predicciones]     ##Se pasa a entero
+            referencias = [x.item() if torch.is_tensor(x) else x for x in referencias]           ##Se pasa a entero
 
             accuracy_eval = metric.compute(predictions = predicciones, references = referencias)
             accuracy_eval = accuracy_eval['accuracy']*100
@@ -190,13 +193,18 @@ print(f"Se han mantenido el mismo resultado durante {patience + 1} epochs. Deten
 dateTime = datetime.datetime.now()
 dateTime = dateTime.strftime("%d%m%Y")
 
-##Escribir los resultados en .txt hasta que se importe la libreria que permita dibujar las graficas
-txt_file_loss = open('/scratch/uduran005/tfg-workspace/graphics/loss_data.txt', 'a')
-content_loss = f"Fecha de ejecución: {dateTime}\n\nValores de loss:\n{loss_values}\n\nNumero de epocas: {epoca}\n\n"
-txt_file_loss.write(content_loss)
+##Escribir los resultados en .json hasta que se importe la libreria que permita dibujar las graficas
+createAccLossData(dateTime, loss_values, accuracy_values, epoca)
 
-txt_file_acc = open('/scratch/uduran005/tfg-workspace/graphics/acc_data.txt', 'a')
-content_acc = f"Fecha de ejecución: {dateTime}\n\nValores de accuracy:\n{accuracy_values}\n\nNumero de epocas: {epoca}\n\n"
-txt_file_acc.write(content_acc)
+##Escribir los resultados en .txt hasta que se importe la libreria que permita dibujar las graficas
+# txt_file_loss = open('/scratch/uduran005/tfg-workspace/graphics/loss_data.txt', 'a')
+# content_loss = f"Fecha de ejecución: {dateTime}\n\nValores de loss:\n{loss_values}\n\nNumero de epocas: {epoca}\n\n"
+# txt_file_loss.write(content_loss)
+
+# txt_file_acc = open('/scratch/uduran005/tfg-workspace/graphics/acc_data.txt', 'a')
+# content_acc = f"Fecha de ejecución: {dateTime}\n\nValores de accuracy:\n{accuracy_values}\n\nNumero de epocas: {epoca}\n\n"
+# txt_file_acc.write(content_acc)
+
+##Dibujar graficas y almacenarlas como .pdf
 #drawLossGraphic(loss_values, epoca, dateTime)
 #drawEvalGraphic(accuracy_values, epoca, dateTime)
