@@ -7,10 +7,11 @@ from dataLoader import load_hdf5_data, createDataLoaders
 import json
 import os
 from json_creator import createMapeo_Clases, createMapeo
-#from draw_graph import drawLossGraphic, drawEvalGraphic
+#from test_draw_graph import drawLossGraphic, drawEvalGraphic
 from execution_data import createAccLossData
 import datetime
 import datasets
+import sys
 
 
 # os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
@@ -18,17 +19,28 @@ import datasets
 
 ## Se crea la clase Transformer
 class TransformerEncoder(nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_layers, num_heads, output_dim, max_seq_len, dropout=0.1):
+    def __init__(self, input_dim, hidden_dim, num_layers, num_heads, output_dim, max_seq_len, dim_feedforward, dropout=0.1):
         super(TransformerEncoder, self).__init__()
 
         self.cls_token = nn.Parameter(torch.randn(1, 1, hidden_dim))            ##Capa de embedding para el token CLS
+        torch.nn.init.normal_(self.cls_token, std=0.02)
         self.cls_token.requires_grad = True
         self.embedding = nn.Linear(input_dim, hidden_dim)
         self.positional_embedding = self.get_positional_embedding(hidden_dim, max_seq_len).to(device)
-        encoder_layers = nn.TransformerEncoderLayer(hidden_dim, num_heads)
+        encoder_layers = nn.TransformerEncoderLayer(hidden_dim, num_heads, dim_feedforward, dropout = dropout)
+        #torch.nn.xavier_uniform_(encoder_layers)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layers, num_layers)
+        
+        ## Incializar de forma uniforme los pesos  
+        for name, param in self.transformer_encoder.named_parameters():
+            ##print(f"Name : {name} // Param: {param}")
+            if 'weight' in name and param.data.dim() == 2:
+                torch.nn.init.xavier_uniform_(param, gain = torch.nn.init.calculate_gain("relu"))       ##Deberia de ser sqrt(2)
+        ##sys.exit()
+
         self.fc = nn.Linear(hidden_dim, output_dim)
-        self.dropout = nn.Dropout(dropout)
+        #self.dropout = nn.Dropout(dropout)
+        torch.nn.init.kaiming_normal_(self.fc.weight, nonlinearity = "relu")
 
     def forward(self, x, mask):
         x = x.to(device)
@@ -95,18 +107,22 @@ test_loader = createDataLoaders(num_classes, file_path_lil_test, device)       #
 # Definir el modelo y otros hiperparámetros
 input_dim = 225
 hidden_dim = 224
+dim_feedforward = hidden_dim * 4
 num_layers = 2
 num_heads = 4
+weight_decay = 0
+transformer_dropout = 0
+learning_rate = 0.0001  
 output_dim = 2000       ##Coger el size del .json de mapeo (Mapeo_clases.json) 
-learning_rate = 0.001
 max_seq_len = 100
 num_epochs = 999999999999
 
-model = TransformerEncoder(input_dim, hidden_dim, num_layers, num_heads, output_dim, max_seq_len)
+model = TransformerEncoder(input_dim, hidden_dim, num_layers, num_heads, output_dim, max_seq_len, dim_feedforward, dropout = transformer_dropout)
 model.to(device)
 
 criterion = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay = weight_decay)    #weight_decay = 0.00001
 
 # EVALUACION
 def evaluacion(model, loader, device):
@@ -130,7 +146,7 @@ def evaluacion(model, loader, device):
             referencias = [x.item() if torch.is_tensor(x) else x for x in referencias]           ##Se pasa a entero
 
             accuracy_eval = metric.compute(predictions = predicciones, references = referencias)
-            accuracy_eval = accuracy_eval['accuracy']*100
+            accuracy_eval = accuracy_eval['accuracy']
 
     return accuracy_eval
 
@@ -173,7 +189,7 @@ while no_improvement_count < patience:
     referencias = [x.item() for x in referencias]           ##Se pasa a entero
 
     accuracy_train = metric.compute(predictions = predicciones, references = referencias)
-    accuracy_train = accuracy_train['accuracy']*100
+    accuracy_train = accuracy_train['accuracy']
     accuracy_values.append(accuracy_train)
     
     epoca = epoch + 1
@@ -194,7 +210,14 @@ dateTime = datetime.datetime.now()
 dateTime = dateTime.strftime("%d%m%Y")
 
 ##Escribir los resultados en .json hasta que se importe la libreria que permita dibujar las graficas
-createAccLossData(dateTime, loss_values, accuracy_values, epoca)
+##Añadir hiperparametros
+# hidden_dim
+# num_layers
+# num_heads
+# learning_rate
+# batch_size
+# weight_decay
+createAccLossData(dateTime, loss_values, accuracy_values, epoca) 
 
 ##Escribir los resultados en .txt hasta que se importe la libreria que permita dibujar las graficas
 # txt_file_loss = open('/scratch/uduran005/tfg-workspace/graphics/loss_data.txt', 'a')
