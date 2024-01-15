@@ -56,10 +56,10 @@ def createDataLoaders(num_classes, file_path, device):
     # Crear datasets y dataloaders
     dataset = CustomDataset(num_classes, file_path)
 
-    batch_size = 32
+    batch_size = 6
 
     def collate_fn_padd(batch):
-        print(f"Device (collate_fn_padd) is --> {device}")
+        #print(f"Device (collate_fn_padd) is --> {device}")
         data = [x[0].to(device) for x in batch]
         data = pad_sequence(data, batch_first=False, padding_value=-2.0)
         #print(f"Datos --> {data.size()}")
