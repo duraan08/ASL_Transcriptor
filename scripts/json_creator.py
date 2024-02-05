@@ -34,7 +34,7 @@ def createMapeo():
         val = count
         instancias = i['instances']
         for j in instancias:
-            key = j['video_id'] + '.mp4'
+            key = j['video_id'] + '.npy'        ##Antes era .mp4
             myDictionary[key] = val
         count += 1
 
