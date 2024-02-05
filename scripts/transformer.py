@@ -152,8 +152,7 @@ def evaluacion(model, loader, device):
     referencias = []    ##Valor real 
 
     with torch.no_grad():
-        for inp, tg in loader:     #Antes ,msk
-            #inp, tg, msk = inp.to(device), tg.to(device), msk.to(device)
+        for inp, tg in loader:
             inp, tg = inp.to(device), tg.to(device)
 
             referencias.extend(torch.argmax(tg, dim = 1))
@@ -175,7 +174,8 @@ patience = 9
 best_accuracy = 0.0
 no_improvement_count = 0
 loss_values = []
-accuracy_values = []
+accuracy_values_train = []
+accuracy_values_test = []
 metric = datasets.load_metric('accuracy')
 
 while no_improvement_count < patience:  ##Comprobación para EARLY_STOPPING
@@ -214,7 +214,8 @@ while no_improvement_count < patience:  ##Comprobación para EARLY_STOPPING
 
     accuracy_train = metric.compute(predictions = predicciones, references = referencias)
     accuracy_train = accuracy_train['accuracy'] * 100
-    accuracy_values.append(accuracy_train)
+    accuracy_values_train.append(accuracy_train)
+    accuracy_values_test.append(accuracy_eval)
     
     epoca = epoch + 1
 
@@ -277,5 +278,5 @@ dateTime = dateTime.strftime("%d%m%Y")
 #createAccLossData(dateTime, loss_values, accuracy_values, epoca, hidden_dim, num_layers, num_heads, learning_rate, batch_size, weight_decay) 
 
 ##Dibujar graficas y almacenarlas como .pdf
-drawGraph(loss_values, epoca, dateTime, hidden_dim, num_layers, num_heads, learning_rate, batch_size, weight_decay, "loss")
-drawGraph(accuracy_values, epoca, dateTime, hidden_dim, num_layers, num_heads, learning_rate, batch_size, weight_decay, "acc")
+drawGraph(loss_values, accuracy_values_test, epoca, dateTime, hidden_dim, num_layers, num_heads, learning_rate, batch_size, weight_decay, "loss")
+drawGraph(accuracy_values_train, accuracy_values_test, epoca, dateTime, hidden_dim, num_layers, num_heads, learning_rate, batch_size, weight_decay, "acc")
