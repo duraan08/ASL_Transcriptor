@@ -257,7 +257,7 @@ while no_improvement_count < patience:  ##Comprobación para EARLY_STOPPING
             file.write(f"\n - batch_size = {batch_size}")
             file.write(f"\n - weight_decay = {weight_decay}")
             file.write(f"\n\n[ENTRENAMIENTO] - Epoch [{epoca}/{num_epochs}] - Loss: {epoch_loss:.4f} - Accuracy: {accuracy_train:.4f}")
-            file.write(f"\n\n[EVALUACION]  - Loss: {epoch_loss:.4f} - Accuracy: {accuracy_eval:.4f}")
+            file.write(f"\n[EVALUACION]  - Loss: {loss_eval:.4f} - Accuracy: {accuracy_eval:.4f}")
 
     else:
         no_improvement_count += 1
@@ -276,6 +276,10 @@ PATH_modelo = "/scratch/uduran005/tfg-workspace/model/modelo.pth"
 model.load_state_dict(torch.load(PATH))
 accuracy_eval_model, loss_eval_model = evaluacion(model, test_loader, device, criterion)
 print(f"[EVALUACION]  - Loss: {loss_eval_model:.4f} - Accuracy: {accuracy_eval_model:.4f}")
+
+with open('/scratch/uduran005/tfg-workspace/model/datos_mejor_modelo.txt', 'a') as file:
+    file.write(f"\n[TEST]  - Loss: {loss_eval_model:.4f} - Accuracy: {accuracy_eval_model:.4f}")
+
 
 
 
