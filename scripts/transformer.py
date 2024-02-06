@@ -143,30 +143,31 @@ criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay = weight_decay)    #weight_decay = 0.00001
 
 # EVALUACION
-def evaluacion(model, loader, device): 
+def evaluacion(model, loader, device, criterion):
     model.eval()
-    correct = 0
-    total = 0
+    running_loss =  0.0
+    correct =  0
+    total =  0
     metric = datasets.load_metric('accuracy')
     predicciones = []
-    referencias = []    ##Valor real 
+    referencias = []
+    loss = 0
 
     with torch.no_grad():
         for inp, tg in loader:
             inp, tg = inp.to(device), tg.to(device)
-
-            referencias.extend(torch.argmax(tg, dim = 1))
-
-            #outputs = model(inp, msk)
+            referencias.extend(torch.argmax(tg, dim=1))
             outputs = model(inp)
-            tg = torch.argmax(tg, dim = 1)
-            predicciones.extend(torch.argmax(outputs, dim = 1))
-    predicciones = [x.item() if torch.is_tensor(x) else x for x in predicciones]     ##Se pasa a entero
-    referencias = [x.item() if torch.is_tensor(x) else x for x in referencias]           ##Se pasa a entero
+            tg = torch.argmax(tg, dim=1)
+            predicciones.extend(torch.argmax(outputs, dim=1))
+            loss = criterion(outputs, tg)
+            running_loss += loss.item()
 
-    accuracy_eval = metric.compute(predictions = predicciones, references = referencias)
-    accuracy_eval = accuracy_eval['accuracy'] * 100
-    return accuracy_eval
+    epoch_loss = running_loss / len(loader.dataset)
+    accuracy_eval = metric.compute(predictions=predicciones, references=referencias)
+    accuracy_eval = accuracy_eval['accuracy'] *  100
+
+    return accuracy_eval, epoch_loss
 
 # ENTRENAMIENTO
 epoch = 0
@@ -176,6 +177,7 @@ no_improvement_count = 0
 loss_values = []
 accuracy_values_train = []
 accuracy_values_test = []
+loss_values_test = []
 metric = datasets.load_metric('accuracy')
 
 while no_improvement_count < patience:  ##Comprobación para EARLY_STOPPING
@@ -208,7 +210,7 @@ while no_improvement_count < patience:  ##Comprobación para EARLY_STOPPING
 
     epoch_loss = running_loss / len(train_loader.dataset)
     loss_values.append(epoch_loss)
-    accuracy_eval = evaluacion(model, val_loader, device)
+    accuracy_eval, loss_eval = evaluacion(model, val_loader, device, criterion)
     predicciones = [x.item() for x in predicciones]         ##Se pasa a entero
     referencias = [x.item() for x in referencias]           ##Se pasa a entero
 
@@ -216,11 +218,12 @@ while no_improvement_count < patience:  ##Comprobación para EARLY_STOPPING
     accuracy_train = accuracy_train['accuracy'] * 100
     accuracy_values_train.append(accuracy_train)
     accuracy_values_test.append(accuracy_eval)
+    loss_values_test.append(loss_eval)
     
     epoca = epoch + 1
 
     print(f"[ENTRENAMIENTO] - Epoch [{epoca}/{num_epochs}] - Loss: {epoch_loss:.4f} - Accuracy: {accuracy_train:.4f}")       ## Multiplicarlo x100
-    print(f"[EVALUACION]  - Accuracy: {accuracy_eval:.4f}")
+    print(f"[EVALUACION]  - Loss: {loss_eval:.4f} - Accuracy: {accuracy_eval:.4f}")
 
     if accuracy_train > best_accuracy:
         ## Guardar el modelo
@@ -243,6 +246,19 @@ while no_improvement_count < patience:  ##Comprobación para EARLY_STOPPING
 
         best_accuracy = accuracy_train
         no_improvement_count = 0
+
+        ##Almacenar hyperparametros//mejor acc en train//mejor acc en eval//Resultado de test
+        with open('/scratch/uduran005/tfg-workspace/model/datos_mejor_modelo.txt', 'w') as file:
+            file.write(f"[HIPERPARAMETROS]")
+            file.write(f"\n - hidden_dim = {hidden_dim}")
+            file.write(f"\n - num_layers = {num_layers}")
+            file.write(f"\n - num_heads = {num_heads}")
+            file.write(f"\n - learning_rate = {learning_rate}")
+            file.write(f"\n - batch_size = {batch_size}")
+            file.write(f"\n - weight_decay = {weight_decay}")
+            file.write(f"\n\n[ENTRENAMIENTO] - Epoch [{epoca}/{num_epochs}] - Loss: {epoch_loss:.4f} - Accuracy: {accuracy_train:.4f}")
+            file.write(f"\n\n[EVALUACION]  - Loss: {epoch_loss:.4f} - Accuracy: {accuracy_eval:.4f}")
+
     else:
         no_improvement_count += 1
 
@@ -258,8 +274,8 @@ test_loader = createDataLoaders(num_classes, file_path_test, device, batch_size)
 #evaluacion_modelo(model, val_loader, device)
 PATH_modelo = "/scratch/uduran005/tfg-workspace/model/modelo.pth"
 model.load_state_dict(torch.load(PATH))
-accuracy_eval_model = evaluacion(model, test_loader, device)
-print(f"[EVALUACION]  - Accuracy: {accuracy_eval_model:.4f}")
+accuracy_eval_model, loss_eval_model = evaluacion(model, test_loader, device, criterion)
+print(f"[EVALUACION]  - Loss: {loss_eval_model:.4f} - Accuracy: {accuracy_eval_model:.4f}")
 
 
 
@@ -278,5 +294,5 @@ dateTime = dateTime.strftime("%d%m%Y")
 #createAccLossData(dateTime, loss_values, accuracy_values, epoca, hidden_dim, num_layers, num_heads, learning_rate, batch_size, weight_decay) 
 
 ##Dibujar graficas y almacenarlas como .pdf
-drawGraph(loss_values, accuracy_values_test, epoca, dateTime, hidden_dim, num_layers, num_heads, learning_rate, batch_size, weight_decay, "loss")
+drawGraph(loss_values, loss_values_test, epoca, dateTime, hidden_dim, num_layers, num_heads, learning_rate, batch_size, weight_decay, "loss")
 drawGraph(accuracy_values_train, accuracy_values_test, epoca, dateTime, hidden_dim, num_layers, num_heads, learning_rate, batch_size, weight_decay, "acc")
