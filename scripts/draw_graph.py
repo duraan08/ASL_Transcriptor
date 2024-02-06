@@ -6,17 +6,19 @@ import datetime
 from matplotlib.lines import Line2D
 
 count = 1
-def drawLossGraphic(loss_values, accuracy_values_test, num_epochs, dateTime, hyperparameters):
+def drawLossGraphic(loss_values, loss_values_test, num_epochs, dateTime, hyperparameters):
     plt.figure()
-    plt.plot(loss_values, linestyle='-', label='Función de Pérdida', color='blue')
+    plt.plot(loss_values, linestyle='-', label='Loss train', color='red')
+    plt.plot(loss_values_test, linestyle='-', label='Loss evaluación', color='green')
+
 
     plt.xlabel('Épocas')
     plt.ylabel('Pérdida')
 
     plt.xscale('log')
 
-    custom_lines = [Line2D([0], [0], color='blue', lw=2)]
-    plt.legend(custom_lines, ['Función de Pérdida'], loc='lower left')
+    custom_lines = [Line2D([0], [0], color='red', lw=2), Line2D([0], [0], color='green', lw=2)]
+    plt.legend(custom_lines, ['Loss train', 'Loss evaluación'], loc='lower left')
 
     # Agrega los hiperparámetros como texto en la parte superior del gráfico
     plt.text(0.01, 0.95, hyperparameters, transform=plt.gcf().transFigure, fontsize=10, verticalalignment='top')
