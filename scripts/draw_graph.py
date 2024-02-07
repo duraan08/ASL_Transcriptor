@@ -21,7 +21,7 @@ def drawLossGraphic(loss_values, loss_values_test, num_epochs, dateTime, hyperpa
     plt.legend(custom_lines, ['Loss train', 'Loss evaluación'], loc='lower left')
 
     # Agrega los hiperparámetros como texto en la parte superior del gráfico
-    plt.text(0.01, 0.95, hyperparameters, transform=plt.gcf().transFigure, fontsize=10, verticalalignment='top')
+    plt.text(0.01, 0.95, hyperparameters, transform=plt.gcf().transFigure, fontsize=9, verticalalignment='top')
 
     path_fichero = f"/scratch/uduran005/tfg-workspace/graphics/loss/grafica_perdida_{dateTime}_1.pdf"
     path_general = f"/scratch/uduran005/tfg-workspace/graphics/loss"
@@ -48,7 +48,7 @@ def drawEvalGraphic(accuracy_values_train, accuracy_values_test, num_epochs, dat
     plt.legend(custom_lines, ['Accuracy train', 'Accuracy evalucación'], loc='upper left')
 
     # Agrega los hiperparámetros como texto en la parte superior del gráfico
-    plt.text(0.01, 0.95, hyperparameters, transform=plt.gcf().transFigure, fontsize=10, verticalalignment='top')
+    plt.text(0.01, 0.95, hyperparameters, transform=plt.gcf().transFigure, fontsize=9, verticalalignment='top')
 
 
     path_fichero = f"/scratch/uduran005/tfg-workspace/graphics/accuracy/grafica_accuracy_{dateTime}_1.pdf"
@@ -62,14 +62,16 @@ def drawEvalGraphic(accuracy_values_train, accuracy_values_test, num_epochs, dat
             file_index = max(file.split("_")[3].split(".")[0])
         plt.savefig(f"/scratch/uduran005/tfg-workspace/graphics/accuracy/grafica_accuracy_{dateTime}_{int(file_index) + 1}.pdf")     
 
-def drawGraph(values, values2, epochs, datetime, hidden_dim, num_layers, num_heads, learning_rate, batch_size, weight_decay, ty):
+def drawGraph(values, values2, epochs, datetime, hidden_dim, num_layers, num_heads, learning_rate, batch_size, weight_decay, dropout, ty):
     
     hyperparameters = {
-        'hidden_dim': hidden_dim,
-        'num_layers': num_layers,
-        'num_heads': num_heads,
-        'learning_rate': learning_rate,
-        'weight_decay': weight_decay
+        'Hidden dim': hidden_dim,
+        'Layers': num_layers,
+        'Heads': num_heads,
+        'LR': learning_rate,
+        'Batch': batch_size,
+        'WD': weight_decay,
+        'Dropout': dropout
     }
     hyperparameters_string = '  '.join([f'{key}: {value}' for key, value in hyperparameters.items()])
 
