@@ -12,8 +12,6 @@ from json_creator import createMapeo_Clases
 from dataLoader import createDataLoaders
 from draw_graph import drawGraph
 from model_test import test
-# from execution_data import createAccLossData
-
 
 # os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
 # os.environ['CUDA_VISIBLE_DEVICES'] = '0'
@@ -137,7 +135,7 @@ model.to(device)
 
 criterion = torch.nn.CrossEntropyLoss()
 
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay = weight_decay)    #weight_decay = 0.00001
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay = weight_decay)
 
 ## Para posteriormente utilizarlo y poder indentificar los diferentes archivos
 dateTime = datetime.datetime.now()
@@ -281,16 +279,6 @@ print(f"[EVALUACION]  - Loss: {loss_test_model:.4f} - Accuracy: {accuracy_test_m
 
 with open(f'/scratch/uduran005/tfg-workspace/model/datos_mejor_modelo.txt', 'a') as file:
     file.write(f"\n[TEST]  - Loss: {loss_test_model:.4f} - Accuracy: {accuracy_test_model:.4f}")
-
-##Escribir los resultados en .json hasta que se importe la libreria que permita dibujar las graficas
-##Añadir hiperparametros
-# hidden_dim
-# num_layers
-# num_heads
-# learning_rate
-# batch_size
-# weight_decay
-#createAccLossData(dateTime, loss_values, accuracy_values, epoca, hidden_dim, num_layers, num_heads, learning_rate, batch_size, weight_decay) 
 
 ##Dibujar graficas y almacenarlas como .pdf
 drawGraph(loss_values, loss_values_test, epoca, dateTime, hidden_dim, num_layers, num_heads, learning_rate, batch_size, weight_decay, transformer_dropout, "loss")
