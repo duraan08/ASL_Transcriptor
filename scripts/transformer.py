@@ -11,9 +11,8 @@ from torch.utils.data import DataLoader, Dataset
 from json_creator import createMapeo_Clases
 from dataLoader import createDataLoaders
 from draw_graph import drawGraph
+from model_test import test
 # from execution_data import createAccLossData
-# from model_evaluation import evaluacion_modelo
-
 
 
 # os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
@@ -92,8 +91,8 @@ dim_feedforward = hidden_dim * 4
 batch_size = 100
 num_layers = 8
 num_heads = hidden_dim // 64
-weight_decay = 0               ##Antes era 0
-transformer_dropout = 0    ##Antes era 0
+weight_decay = 0.0001               ##Antes era 0
+transformer_dropout = 0.1   ##Antes era 0
 learning_rate = 0.0001  
 output_dim = 2000       ##Coger el size del .json de mapeo (Mapeo_clases.json) 
 max_seq_len = 100
@@ -118,8 +117,6 @@ train_loader = createDataLoaders(num_classes, file_path_train, device, batch_siz
 print(f"DataLoader con los datos del EVALUACION: ")
 val_loader =  createDataLoaders(num_classes, file_path_val, device, batch_size)       ##Finalmente será file_path_val
 
-
-
 # # Verificar la creación exitosa de los DataLoaders
 # for inputs, targets in train_loader:
 #     print(f"Batch de entrenamiento - Inputs: {inputs.shape}, Targets: {targets.shape}")
@@ -141,6 +138,10 @@ model.to(device)
 criterion = torch.nn.CrossEntropyLoss()
 
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay = weight_decay)    #weight_decay = 0.00001
+
+## Para posteriormente utilizarlo y poder indentificar los diferentes archivos
+dateTime = datetime.datetime.now()
+dateTime = dateTime.strftime("%d%m%Y")
 
 # EVALUACION
 def evaluacion(model, loader, device, criterion):
@@ -248,7 +249,7 @@ while no_improvement_count < patience:  ##Comprobación para EARLY_STOPPING
         no_improvement_count = 0
 
         ##Almacenar hyperparametros//mejor acc en train//mejor acc en eval//Resultado de test
-        with open('/scratch/uduran005/tfg-workspace/model/datos_mejor_modelo.txt', 'w') as file:
+        with open(f'/scratch/uduran005/tfg-workspace/model/datos_mejor_modelo_{dateTime}.txt', 'w') as file:
             file.write(f"[HIPERPARAMETROS]")
             file.write(f"\n - hidden_dim = {hidden_dim}")
             file.write(f"\n - num_layers = {num_layers}")
@@ -256,6 +257,7 @@ while no_improvement_count < patience:  ##Comprobación para EARLY_STOPPING
             file.write(f"\n - learning_rate = {learning_rate}")
             file.write(f"\n - batch_size = {batch_size}")
             file.write(f"\n - weight_decay = {weight_decay}")
+            file.write(f"\n - dropout = {transformer_dropout}")
             file.write(f"\n\n[ENTRENAMIENTO] - Epoch [{epoca}/{num_epochs}] - Loss: {epoch_loss:.4f} - Accuracy: {accuracy_train:.4f}")
             file.write(f"\n[EVALUACION]  - Loss: {loss_eval:.4f} - Accuracy: {accuracy_eval:.4f}")
 
@@ -274,18 +276,11 @@ test_loader = createDataLoaders(num_classes, file_path_test, device, batch_size)
 #evaluacion_modelo(model, val_loader, device)
 PATH_modelo = "/scratch/uduran005/tfg-workspace/model/modelo.pth"
 model.load_state_dict(torch.load(PATH))
-accuracy_eval_model, loss_eval_model = evaluacion(model, test_loader, device, criterion)
-print(f"[EVALUACION]  - Loss: {loss_eval_model:.4f} - Accuracy: {accuracy_eval_model:.4f}")
+accuracy_test_model, loss_test_model = test(model, test_loader, device, criterion, file_path_test)
+print(f"[EVALUACION]  - Loss: {loss_test_model:.4f} - Accuracy: {accuracy_test_model:.4f}")
 
-with open('/scratch/uduran005/tfg-workspace/model/datos_mejor_modelo.txt', 'a') as file:
-    file.write(f"\n[TEST]  - Loss: {loss_eval_model:.4f} - Accuracy: {accuracy_eval_model:.4f}")
-
-
-
-
-
-dateTime = datetime.datetime.now()
-dateTime = dateTime.strftime("%d%m%Y")
+with open(f'/scratch/uduran005/tfg-workspace/model/datos_mejor_modelo.txt', 'a') as file:
+    file.write(f"\n[TEST]  - Loss: {loss_test_model:.4f} - Accuracy: {accuracy_test_model:.4f}")
 
 ##Escribir los resultados en .json hasta que se importe la libreria que permita dibujar las graficas
 ##Añadir hiperparametros
@@ -298,5 +293,5 @@ dateTime = dateTime.strftime("%d%m%Y")
 #createAccLossData(dateTime, loss_values, accuracy_values, epoca, hidden_dim, num_layers, num_heads, learning_rate, batch_size, weight_decay) 
 
 ##Dibujar graficas y almacenarlas como .pdf
-drawGraph(loss_values, loss_values_test, epoca, dateTime, hidden_dim, num_layers, num_heads, learning_rate, batch_size, weight_decay, "loss")
-drawGraph(accuracy_values_train, accuracy_values_test, epoca, dateTime, hidden_dim, num_layers, num_heads, learning_rate, batch_size, weight_decay, "acc")
+drawGraph(loss_values, loss_values_test, epoca, dateTime, hidden_dim, num_layers, num_heads, learning_rate, batch_size, weight_decay, transformer_dropout, "loss")
+drawGraph(accuracy_values_train, accuracy_values_test, epoca, dateTime, hidden_dim, num_layers, num_heads, learning_rate, batch_size, weight_decay, transformer_dropout, "acc")
