@@ -31,7 +31,8 @@ def drawLossGraphic(loss_values, loss_values_test, num_epochs, dateTime, hyperpa
     else:
         file_list = os.listdir(path_general)
         for file in file_list:
-            file_index = max(file.split("_")[3].split(".")[0])
+            if (file.split('_')[2] == dateTime):
+                file_index = file.split('_')[3].split('.')[0]
         plt.savefig(f"/scratch/uduran005/tfg-workspace/graphics/loss/grafica_perdida_{dateTime}_{int(file_index) + 1}.pdf")     
 
 def drawEvalGraphic(accuracy_values_train, accuracy_values_test, num_epochs, dateTime, hyperparameters):
@@ -59,8 +60,10 @@ def drawEvalGraphic(accuracy_values_train, accuracy_values_test, num_epochs, dat
     else:
         file_list = os.listdir(path_general)
         for file in file_list:
-            file_index = max(file.split("_")[3].split(".")[0])
+            if (file.split('_')[2] == dateTime):
+                file_index = file.split('_')[3].split('.')[0]
         plt.savefig(f"/scratch/uduran005/tfg-workspace/graphics/accuracy/grafica_accuracy_{dateTime}_{int(file_index) + 1}.pdf")     
+
 
 def drawGraph(values, values2, epochs, datetime, hidden_dim, num_layers, num_heads, learning_rate, batch_size, weight_decay, dropout, ty):
     
