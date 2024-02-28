@@ -27,7 +27,6 @@ class TransformerEncoder(nn.Module):
         self.embedding = nn.Linear(input_dim, hidden_dim)
         self.positional_embedding = self.get_positional_embedding(hidden_dim, max_seq_len).to(device)
         encoder_layers = nn.TransformerEncoderLayer(hidden_dim, num_heads, dim_feedforward, dropout = dropout, batch_first = True)     ##batch_first = True --> Va primero
-        #torch.nn.xavier_uniform_(encoder_layers)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layers, num_layers)
         
         ## Incializar de forma uniforme los pesos  
@@ -48,12 +47,11 @@ class TransformerEncoder(nn.Module):
         x = x.to(device)
         #print(f"Input shape --> {x.shape}")
         
-        cls_token = self.cls_token.expand(-1, x.size(1), -1) ## Expandir el token CLS para todas las muestras del batch
-        #print(f"Entrada al embeding --> {x.size()}")
-        x = torch.cat((cls_token, x), dim = 0) ## Agregar el token CLS al comienzo de la secuencia
+        cls_token_expanded = self.cls_token.expand(-1, x.size(1), -1) ## Expandir el token CLS para todas las muestras del batch
+        x = self.embedding(x) + self.positional_embedding[:, :x.size(1)]  # Suma incrustaciones posicionales
+        x = torch.cat((cls_token_expanded, x), dim = 0) ## Agregar el token CLS al comienzo de la secuencia
         #print(f"Shape de la secuencia despues de añadir el token CLS: {x.shape}")
         
-        x = self.embedding(x) + self.positional_embedding[:, :x.size(1)]  # Suma incrustaciones posicionales
         x = x.permute(1, 0, 2)
         #print(f"Antes del encoder --> {x.size()}")
         #x = self.transformer_encoder(x, src_key_padding_mask=mask)
@@ -84,12 +82,12 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Definir hiperparametros
 input_dim = 225
-hidden_dim = 225
+hidden_dim = 112
 dim_feedforward = hidden_dim * 4
 batch_size = 100
-num_layers = 8
+num_layers = 4
 num_heads = hidden_dim // 64
-weight_decay = 0.0001               ##Antes era 0
+weight_decay = 0.000001             ##Antes era 0
 transformer_dropout = 0.1   ##Antes era 0
 learning_rate = 0.0001  
 output_dim = 2000       ##Coger el size del .json de mapeo (Mapeo_clases.json) 
