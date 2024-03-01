@@ -82,14 +82,14 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Definir hiperparametros
 input_dim = 225
-hidden_dim = 112
+hidden_dim = 225
 dim_feedforward = hidden_dim * 4
 batch_size = 100
-num_layers = 4
+num_layers = 2
 num_heads = hidden_dim // 64
-weight_decay = 0.000001             ##Antes era 0
+weight_decay = 0.0000001             ##Antes era 0
 transformer_dropout = 0.1   ##Antes era 0
-learning_rate = 0.0001  
+learning_rate = 0.00005  
 output_dim = 2000       ##Coger el size del .json de mapeo (Mapeo_clases.json) 
 max_seq_len = 100
 num_epochs = 999999999999
@@ -142,9 +142,9 @@ dateTime = dateTime.strftime("%d%m%Y")
 # EVALUACION
 def evaluacion(model, loader, device, criterion):
     model.eval()
-    running_loss =  0.0
-    correct =  0
-    total =  0
+    running_loss = 0.0
+    correct = 0
+    total = 0
     metric = datasets.load_metric('accuracy')
     predicciones = []
     referencias = []
@@ -160,11 +160,20 @@ def evaluacion(model, loader, device, criterion):
             loss = criterion(outputs, tg)
             running_loss += loss.item()
 
+            # Calculando top-5 accuracy
+            _, pred = outputs.topk(5, 1, True, True) # Obtiene los 5 índices más altos de las predicciones
+            correct += pred.eq(tg.unsqueeze(1).expand_as(pred)).sum().item() # Compara si los índices de las predicciones están en las etiquetas objetivo
+            total += tg.size(0) # Suma el número de etiquetas objetivo
+
     epoch_loss = running_loss / len(loader.dataset)
     accuracy_eval = metric.compute(predictions=predicciones, references=referencias)
-    accuracy_eval = accuracy_eval['accuracy'] *  100
+    accuracy_eval = accuracy_eval['accuracy'] * 100
 
-    return accuracy_eval, epoch_loss
+    # Calcula la precisión top-5
+    top5_accuracy = correct / total * 100
+
+    return accuracy_eval, epoch_loss, top5_accuracy
+
 
 # ENTRENAMIENTO
 epoch = 0
@@ -175,6 +184,7 @@ loss_values = []
 accuracy_values_train = []
 accuracy_values_test = []
 loss_values_test = []
+accuracy_top5_values = []
 metric = datasets.load_metric('accuracy')
 
 while no_improvement_count < patience:  ##Comprobación para EARLY_STOPPING
@@ -207,7 +217,7 @@ while no_improvement_count < patience:  ##Comprobación para EARLY_STOPPING
 
     epoch_loss = running_loss / len(train_loader.dataset)
     loss_values.append(epoch_loss)
-    accuracy_eval, loss_eval = evaluacion(model, val_loader, device, criterion)
+    accuracy_eval, loss_eval, top5acc = evaluacion(model, val_loader, device, criterion)
     predicciones = [x.item() for x in predicciones]         ##Se pasa a entero
     referencias = [x.item() for x in referencias]           ##Se pasa a entero
 
@@ -216,11 +226,12 @@ while no_improvement_count < patience:  ##Comprobación para EARLY_STOPPING
     accuracy_values_train.append(accuracy_train)
     accuracy_values_test.append(accuracy_eval)
     loss_values_test.append(loss_eval)
+    accuracy_top5_values.append(top5acc)
     
     epoca = epoch + 1
 
     print(f"[ENTRENAMIENTO] - Epoch [{epoca}/{num_epochs}] - Loss: {epoch_loss:.4f} - Accuracy: {accuracy_train:.4f}")       ## Multiplicarlo x100
-    print(f"[EVALUACION]  - Loss: {loss_eval:.4f} - Accuracy: {accuracy_eval:.4f}")
+    print(f"[EVALUACION]  - Loss: {loss_eval:.4f} - Accuracy: {accuracy_eval:.4f} - Top 5 Accuracy: {top5acc:4f}")
 
     if accuracy_train > best_accuracy:
         ## Guardar el modelo
@@ -272,12 +283,13 @@ test_loader = createDataLoaders(num_classes, file_path_test, device, batch_size)
 #evaluacion_modelo(model, val_loader, device)
 PATH_modelo = "/scratch/uduran005/tfg-workspace/model/modelo.pth"
 model.load_state_dict(torch.load(PATH))
-accuracy_test_model, loss_test_model = test(model, test_loader, device, criterion, file_path_test)
-print(f"[EVALUACION]  - Loss: {loss_test_model:.4f} - Accuracy: {accuracy_test_model:.4f}")
+accuracy_test_model, loss_test_model, top5_test_acc = test(model, test_loader, device, criterion, file_path_test)
+print(f"[TEST]  - Loss: {loss_test_model:.4f} - Accuracy: {accuracy_test_model:.4f} - Top 5 Accuracy: {top5_test_acc:4f}")
 
 with open(f'/scratch/uduran005/tfg-workspace/model/datos_mejor_modelo.txt', 'a') as file:
-    file.write(f"\n[TEST]  - Loss: {loss_test_model:.4f} - Accuracy: {accuracy_test_model:.4f}")
+    file.write(f"\n[TEST]  - Loss: {loss_test_model:.4f} - Accuracy: {accuracy_test_model:.4f} - Top 5 Accuracy: {top5_test_acc:4f}")
 
 ##Dibujar graficas y almacenarlas como .pdf
 drawGraph(loss_values, loss_values_test, epoca, dateTime, hidden_dim, num_layers, num_heads, learning_rate, batch_size, weight_decay, transformer_dropout, "loss")
 drawGraph(accuracy_values_train, accuracy_values_test, epoca, dateTime, hidden_dim, num_layers, num_heads, learning_rate, batch_size, weight_decay, transformer_dropout, "acc")
+drawGraph(accuracy_top5_values, accuracy_values_test, epoca, dateTime, hidden_dim, num_layers, num_heads, learning_rate, batch_size, weight_decay, transformer_dropout, "top5")
