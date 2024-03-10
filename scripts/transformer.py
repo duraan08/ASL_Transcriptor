@@ -82,14 +82,14 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Definir hiperparametros
 input_dim = 225
-hidden_dim = 225
+hidden_dim = 112
 dim_feedforward = hidden_dim * 4
 batch_size = 100
 num_layers = 2
 num_heads = hidden_dim // 64
-weight_decay = 0.0000001             ##Antes era 0
+weight_decay = 0.00001             ##Antes era 0
 transformer_dropout = 0.1   ##Antes era 0
-learning_rate = 0.00005  
+learning_rate = 0.0001  
 output_dim = 2000       ##Coger el size del .json de mapeo (Mapeo_clases.json) 
 max_seq_len = 100
 num_epochs = 999999999999
